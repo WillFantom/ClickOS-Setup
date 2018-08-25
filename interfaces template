@@ -1,0 +1,16 @@
+# LoopBack
+auto lo
+iface lo inet loopback
+
+# OvS Bridge
+auto OvS_Bridge_Name
+allow-ovs OvS_Bridge_Name
+iface OvS_Bridge_Name inet dhcp
+    ovs_type OVSBridge
+    ovs_ports Interface_Name
+
+# OvS Port
+allow-OvS_Bridge_Name Interface_Name
+iface Interface_Name inet manual
+    ovs_bridge OvS_Bridge_Name
+    ovs_type OVSPort
