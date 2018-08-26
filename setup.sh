@@ -127,6 +127,7 @@ function xenSetup {
 
     #Modify GRUB default
     sed -i s/GRUB_DEFAULT=0/GRUB_DEFAULT=3/g /etc/default/grub
+    update-grub
 
     echoCompleted "Xen Setup Complete"
 }
