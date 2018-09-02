@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-## Setup script for a ClickOS Server using Xen & Ubuntu Sefver 18.04.1
+## Setup script for a ClickOS Server using Xen & Ubuntu Server 16.04
 ## Last Updated 25/08/2018
 ## Will Fantom
 
