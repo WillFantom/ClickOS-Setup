@@ -5,10 +5,6 @@ set -e
 ## Last Updated 25/08/2018
 ## Will Fantom
 
-#####################
-####  VARIABLES  ####
-#####################
-
 # Paths
 BASE_DIR="/root"
 SCRIPT_DIR="/scripts"
@@ -27,10 +23,6 @@ UK_DEB_SRC="deb-src http://uk.archive.ubuntu.com/ubuntu/ xenial main universe"
 
 # Echo Marks
 CHECK="\033[0;32m\xE2\x9C\x94\033[0m"
-
-#####################
-####  FUNCTIONS  ####
-#####################
 
 # Print in bold
 function echoBold {
@@ -54,6 +46,13 @@ function ensureRoot {
         exit
     fi
     echoCompleted "Root User Confirmed"
+}
+
+# Get make jobs value
+function setJobs {
+    echoBold "Enter the number of Make jobs to run"
+    read -p "> " MAKE_JOBS
+    echoCompleted "Make Jobs Set"
 }
 
 # Move the install script from the current dir to the install scripts dir
@@ -92,6 +91,15 @@ function cloneRepos {
     fi
     if [ ! -d ./toolchain ]; then 
         git clone https://github.com/sysml/toolchain
+    fi
+    if [ ! -d ./rumprun ]; then 
+       git clone https://github.com/rumpkernel/rumprun
+    fi
+    if [ ! -d ./rumprun-packages ]; then 
+       git clone https://github.com/rumpkernel/rumprun-packages
+    fi 
+    if [ ! -d ./osv ]; then 
+       git clone https://github.com/cloudius-systems/osv
     fi
     echoCompleted "Cloned Repositories"
 }
@@ -136,26 +144,30 @@ function xenSetup {
 function clickosSetup {
     echoBold "Setting up ClickOS"
 
-    #Export env vars
-    export MINIOS_ROOT=$BASE_DIR/mini-os
-    export CLICKOS_ROOT=$BASE_DIR/clickos
-    export TOOLCHAIN_ROOT=$BASE_DIR/toolchain
-    export CLICKOSCTL_ROOT=$BASE_DIR/clickos-ctl
+    read -p "Install ClickOS (MiniOS)? " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        #Export env vars
+        export MINIOS_ROOT=$BASE_DIR/mini-os
+        export CLICKOS_ROOT=$BASE_DIR/clickos
+        export TOOLCHAIN_ROOT=$BASE_DIR/toolchain
+        export CLICKOSCTL_ROOT=$BASE_DIR/clickos-ctl
 
-    #Build Toolchain
-    cd $TOOLCHAIN_ROOT
-    make
-    export NEWLIB_ROOT=$TOOLCHAIN_ROOT"/x86_64-root/x86_64-xen-elf"
-    export LWIP_ROOT=$TOOLCHAIN_ROOT"/x86_64-root/x86_64-xen-elf"
+        #Build Toolchain
+        cd $TOOLCHAIN_ROOT
+        make
+        export NEWLIB_ROOT=$TOOLCHAIN_ROOT"/x86_64-root/x86_64-xen-elf"
+        export LWIP_ROOT=$TOOLCHAIN_ROOT"/x86_64-root/x86_64-xen-elf"
 
-    #Build ClickOS with MiniOS
-    cd $CLICKOS_ROOT
-    ./configure --enable-minios --with-xen=$XEN_ROOT --with-minios=$MINIOS_ROOT
-    make -j$MAKE_JOBS minios
+        #Build ClickOS with MiniOS
+        cd $CLICKOS_ROOT
+        ./configure --enable-minios --with-xen=$XEN_ROOT --with-minios=$MINIOS_ROOT
+        make -j$MAKE_JOBS minios
 
-    #Build ClickOS Ctl
-    cd  $CLICKOSCTL_ROOT
-    make -j$MAKE_JOBS
+        #Build ClickOS Ctl
+        cd  $CLICKOSCTL_ROOT
+        make -j$MAKE_JOBS
+    fi
 
     echoCompleted "ClickOS Setup Complete"
 }
@@ -170,7 +182,7 @@ function ovsSetup {
     #Get device names
     IFACE_NAME=""
     BRIDGE_NAME=""
-    read -p "Enter the OvS Bridge name (e.g. xnebr0)... " BRIDGE_NAME
+    read -p "Enter the OvS Bridge name (e.g. xenbr0)... " BRIDGE_NAME
     read -p "Enter the OVS Port name (e.g. eth0)... " IFACE_NAME
 
     #Chane interfaces file
@@ -178,12 +190,11 @@ function ovsSetup {
     sed -i s/Interface_Name/"$IFACE_NAME"/g $BASE_DIR$SCRIPT_DIR$INSTALLSCRIPT_DIR"/interfaces template"
     cp $BASE_DIR$SCRIPT_DIR$INSTALLSCRIPT_DIR"/interfaces template" /etc/network/interfaces
 
+    ovs-vsctl add-br $BRIDGE_NAME
+    ovs-vsctl add-port $BRIDGE_NAME $IFACE_NAME
+
     echoCompleted "OvS Setup Complete"
 }
-
-################
-####  MAIN  ####
-################
 
 function main {
     echoBold "Setting Up ClickOS Server"
@@ -196,7 +207,7 @@ function main {
     clickosSetup
     ovsSetup
 
-    echoCompleted "ClickOS Server Setup Complete"
+    echoCompleted "Server Setup Complete"
     echoBold "Rebooting..."
 
     reboot
